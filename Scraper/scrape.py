@@ -1,5 +1,4 @@
 import logging
-import json
 import requests
 import time
 from selenium import webdriver
@@ -28,6 +27,7 @@ def save_job_to_api(job):
             logging.warning(f"⚠️ Failed to save {job['title']}: {response.text}")
     except Exception as e:
         logging.error(f"❌ Error saving job '{job.get('title', 'unknown')}': {e}")
+
 
 def scrape_jobs():
     logging.info("🚀 Starting scraper...")
@@ -62,15 +62,20 @@ def scrape_jobs():
             company = job.get("company", "N/A")
             location = job.get("cities", ["Unknown"])[0] if job.get("cities") else "Unknown"
             country = job.get("countries", {}).get("label", "Unknown")
-            job_type = ", ".join(job.get("sectors", [])) if job.get("sectors") else "N/A"
-            tags = ", ".join(job.get("tags", [])) if job.get("tags") else "N/A"
-            posting_date = job.get("created_at", "N/A")
+
+            # ✅ Separate sector and job_type
+            sector = ", ".join(job.get("sectors", [])) if job.get("sectors") else None
+            job_type = "Full-time"  # Default assumption for scraped jobs
+
+            tags = ", ".join(job.get("tags", [])) if job.get("tags") else None
+            posting_date = job.get("created_at", None)
 
             job_data = {
                 "title": title,
                 "company": company,
                 "location": f"{location}, {country}",
                 "job_type": job_type,
+                "sector": sector,   # ✅ new field added
                 "tags": tags,
                 "posting_date": posting_date,
             }
@@ -82,6 +87,7 @@ def scrape_jobs():
 
     driver.quit()
     logging.info("🏁 Scraper finished successfully!")
+
 
 if __name__ == "__main__":
     scrape_jobs()

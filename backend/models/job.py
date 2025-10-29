@@ -8,7 +8,13 @@ class Job(db.Model):
     company = db.Column(db.String(100), nullable=False)
     location = db.Column(db.String(100), nullable=False)
     posting_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    job_type = db.Column(db.String(100), nullable=False)
+    
+    # Employment type: Full-time, Part-time, Contract, Internship
+    job_type = db.Column(db.String(100), nullable=True)
+    
+    # NEW FIELD — Industry or sector (e.g., Health, Finance, Tech)
+    sector = db.Column(db.String(150), nullable=True)
+    
     tags = db.Column(db.String(255))
 
     __table_args__ = (
