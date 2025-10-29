@@ -9,23 +9,22 @@ function App() {
   const handleJobsChanged = () => setRefreshJobs((prev) => !prev);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#fdfcfb] text-gray-900">
       {/* 🔹 Header */}
-      <header className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 text-gray-900 py-14 px-4 text-center shadow-md">
-
-        <h1 className="text-4xl sm:text-5xl font-extrabold mb-4">
-          Find Your Dream Job Today!
+      <header className="bg-[#f9d342] text-gray-900 py-14 px-4 text-center shadow-md">
+        <h1 className="text-4xl sm:text-5xl font-extrabold mb-3 tracking-tight">
+          Create Jobs  — Create Opportunities
         </h1>
-        <p className="text-blue-100 text-lg mb-8">
+        <p className="text-gray-700 text-lg mb-8 max-w-2xl mx-auto">
           Connecting Talent with Opportunity — Your Gateway to Career Success.
         </p>
 
         {/* 🔹 Add Job Button */}
         <button
           onClick={() => setShowAddJob(true)}
-          className="bg-white text-blue-700 font-semibold px-6 py-2 rounded-lg shadow hover:bg-blue-50 transition"
+          className="bg-gray-900 text-white font-semibold px-6 py-2 rounded-full shadow-md hover:bg-gray-800 transition-all duration-200"
         >
-          ➕ Add Job
+          Add Job
         </button>
       </header>
 
