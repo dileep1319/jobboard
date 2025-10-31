@@ -3,10 +3,11 @@ from datetime import datetime, timezone
 from models.job import Job
 from db import db
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 
 job_routes = Blueprint("job_routes", __name__)
 
-# ✅ GET /jobs - return list of jobs (with optional filters + pagination)
+# GET /jobs - return list of jobs (with optional filters + pagination)
 @job_routes.route("/jobs", methods=["GET"])
 def get_jobs():
     query = Job.query
@@ -14,15 +15,31 @@ def get_jobs():
     # --- Filters ---
     job_type = request.args.get("job_type")
     location = request.args.get("location")
-    tag = request.args.get("tag")
+    tag = request.args.get("tag")  # used as search keyword
+    sector = request.args.get("sector")
     sort = request.args.get("sort")
 
-    if job_type:
+    # --- Filtering ---
+    if job_type and job_type.lower() != "all":
         query = query.filter(Job.job_type.ilike(f"%{job_type}%"))
-    if location:
+
+    if location and location.lower() != "all":
         query = query.filter(Job.location.ilike(f"%{location}%"))
-    if tag:
-        query = query.filter(Job.tags.ilike(f"%{tag}%"))
+
+    if sector and sector.lower() != "all":
+        query = query.filter(Job.sector.ilike(f"%{sector}%"))
+
+    # Search by title, company, tags, or location
+    if tag and tag.lower() != "all":
+        search = f"%{tag}%"
+        query = query.filter(
+            or_(
+                Job.title.ilike(search),
+                Job.company.ilike(search),
+                Job.tags.ilike(search),
+                Job.location.ilike(search),
+            )
+        )
 
     # --- Sorting ---
     if sort == "posting_date_asc":
@@ -32,9 +49,9 @@ def get_jobs():
 
     # --- Pagination ---
     page = int(request.args.get("page", 1))
-    limit = int(request.args.get("limit", 8))  # 8 jobs per page by default
-
+    limit = int(request.args.get("limit", 8))
     total_jobs = query.count()
+
     jobs = query.offset((page - 1) * limit).limit(limit).all()
 
     job_list = [
@@ -52,90 +69,15 @@ def get_jobs():
     ]
 
     return jsonify({
+        "success": True,
         "jobs": job_list,
         "total_jobs": total_jobs,
         "total_pages": (total_jobs + limit - 1) // limit,
         "current_page": page
     }), 200
 
-    query = Job.query
 
-    job_type = request.args.get("job_type")
-    location = request.args.get("location")
-    tag = request.args.get("tag")
-    sort = request.args.get("sort")
-
-    if job_type:
-        query = query.filter(Job.job_type.ilike(f"%{job_type}%"))
-    if location:
-        query = query.filter(Job.location.ilike(f"%{location}%"))
-    if tag:
-        query = query.filter(Job.tags.ilike(f"%{tag}%"))
-
-    # ✅ Default to newest first
-    if sort == "posting_date_asc":
-        query = query.order_by(Job.posting_date.asc())
-    else:
-        query = query.order_by(Job.posting_date.desc())
-
-    jobs = query.all()
-
-    job_list = [
-        {
-            "id": job.id,
-            "title": job.title,
-            "company": job.company,
-            "location": job.location,
-            "posting_date": job.posting_date.strftime("%Y-%m-%d"),
-            "job_type": job.job_type,
-            "sector": job.sector,
-            "tags": job.tags,
-        }
-        for job in jobs
-    ]
-    return jsonify(job_list), 200
-
-    query = Job.query
-
-    job_type = request.args.get("job_type")
-    location = request.args.get("location")
-    tag = request.args.get("tag")
-    sector = request.args.get("sector")
-    sort = request.args.get("sort")
-
-    if job_type:
-        query = query.filter(Job.job_type.ilike(f"%{job_type}%"))
-    if sector:
-        query = query.filter(Job.sector.ilike(f"%{sector}%"))
-    if location:
-        query = query.filter(Job.location.ilike(f"%{location}%"))
-    if tag:
-        query = query.filter(Job.tags.ilike(f"%{tag}%"))
-
-    if sort == "posting_date_desc":
-        query = query.order_by(Job.posting_date.desc())
-    elif sort == "posting_date_asc":
-        query = query.order_by(Job.posting_date.asc())
-
-    jobs = query.all()
-
-    job_list = [
-        {
-            "id": job.id,
-            "title": job.title,
-            "company": job.company,
-            "location": job.location,
-            "posting_date": job.posting_date.strftime("%Y-%m-%d"),
-            "job_type": job.job_type,
-            "sector": job.sector,
-            "tags": job.tags,
-        }
-        for job in jobs
-    ]
-    return jsonify(job_list), 200
-
-
-# ✅ GET /jobs/<id> - return one job
+# GET /jobs/<id> - return one job
 @job_routes.route("/jobs/<int:id>", methods=["GET"])
 def get_job(id):
     job = Job.query.get(id)
@@ -155,12 +97,11 @@ def get_job(id):
     return jsonify(job_data), 200
 
 
-# ✅ POST /jobs - add new job
+# POST /jobs - add new job
 @job_routes.route("/jobs", methods=["POST"])
 def create_job():
     data = request.get_json()
 
-    # For scraped jobs, job_type might be missing, sector might be present
     required_fields = ["title", "company", "location"]
     for field in required_fields:
         if not data.get(field):
@@ -172,8 +113,8 @@ def create_job():
             company=data["company"],
             location=data["location"],
             posting_date=datetime.now(timezone.utc),
-            job_type=data.get("job_type", None),  # Optional
-            sector=data.get("sector", None),       # ✅ new field handled
+            job_type=data.get("job_type"),
+            sector=data.get("sector"),
             tags=data.get("tags", ""),
         )
 
@@ -191,7 +132,7 @@ def create_job():
         return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
-# ✅ PUT /jobs/<id> - update existing job
+# PUT /jobs/<id> - update existing job
 @job_routes.route("/jobs/<int:job_id>", methods=["PUT", "PATCH"])
 def update_job(job_id):
     job = Job.query.get(job_id)
@@ -216,7 +157,7 @@ def update_job(job_id):
         return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
-# ✅ DELETE /jobs/<id> - remove job
+# DELETE /jobs/<id> - remove job
 @job_routes.route("/jobs/<int:job_id>", methods=["DELETE"])
 def delete_job(job_id):
     job = Job.query.get(job_id)

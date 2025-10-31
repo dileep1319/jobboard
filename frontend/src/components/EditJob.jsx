@@ -40,11 +40,14 @@ function EditJob({ job, onClose, onUpdated }) {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
-      if (onUpdated) onUpdated();
-      setMessage("→ Job updated successfully!");
+
+      setMessage("Job updated successfully!");
+      setTimeout(() => {
+        if (onUpdated) onUpdated(); // refresh list after showing message
+        onClose(); // close modal after success message shows
+      }, 1200);
     } catch (err) {
       setMessage(`→ ${err.message}`);
-    } finally {
       setLoading(false);
     }
   };

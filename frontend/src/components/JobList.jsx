@@ -91,7 +91,7 @@ function JobList({ jobs, onEdit, onDelete }) {
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full animate-fadeIn border border-gray-100 relative"
           >
-            {/* 🔹 Arrow (Close Button) */}
+            {/* 🔹 Close Button */}
             <button
               onClick={() => setSelectedJob(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"
@@ -158,16 +158,14 @@ function JobList({ jobs, onEdit, onDelete }) {
                 Edit
               </button>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(selectedJob.id);
+              {/* ✅ Delete using component */}
+              <DeleteJob
+                jobId={selectedJob.id}
+                onDelete={() => {
+                  if (onDelete) onDelete(selectedJob.id);
                   setSelectedJob(null);
                 }}
-                className="px-5 py-2 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition"
-              >
-                Delete
-              </button>
+              />
             </div>
           </div>
         </div>

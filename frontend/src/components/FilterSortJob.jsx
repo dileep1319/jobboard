@@ -18,15 +18,24 @@ function FilterSortJob({ onEdit }) {
   const [limit] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ✅ Fetch jobs
+  // ✅ Fetch jobs (same as before)
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
       const sortParam =
         sortOrder === "oldest" ? "posting_date_asc" : "posting_date_desc";
-      const res = await fetch(
-        `http://127.0.0.1:5000/jobs?page=${page}&limit=${limit}&sort=${sortParam}&ts=${Date.now()}`
-      );
+
+      const params = new URLSearchParams({
+        page,
+        limit,
+        sort: sortParam,
+      });
+
+      if (jobType && jobType !== "All") params.append("job_type", jobType);
+      if (location && location !== "All") params.append("location", location);
+      if (searchTerm) params.append("tag", searchTerm);
+
+      const res = await fetch(`http://127.0.0.1:5000/jobs?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch jobs");
 
       const data = await res.json();
@@ -38,41 +47,20 @@ function FilterSortJob({ onEdit }) {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortOrder]);
+  }, [page, limit, sortOrder, jobType, location, searchTerm]);
 
+  // ✅ Debounce the fetch when searchTerm changes
   useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+    const handler = setTimeout(() => {
+      fetchJobs();
+    }, 500); // <-- 500ms debounce
 
-  // ✅ Filtering logic
-  useEffect(() => {
-    let result = [...jobs];
-    const term = searchTerm.toLowerCase();
-
-    if (term) {
-      result = result.filter(
-        (job) =>
-          job.title?.toLowerCase().includes(term) ||
-          job.company?.toLowerCase().includes(term)
-      );
-    }
-    if (jobType !== "All") {
-      result = result.filter(
-        (job) => job.job_type?.toLowerCase() === jobType.toLowerCase()
-      );
-    }
-    if (location !== "All") {
-      result = result.filter(
-        (job) => job.location?.toLowerCase() === location.toLowerCase()
-      );
-    }
-
-    setFilteredJobs(result);
-  }, [searchTerm, jobType, location, jobs]);
+    return () => clearTimeout(handler);
+  }, [searchTerm, jobType, location, sortOrder, page, fetchJobs]);
 
   const handleJobUpdated = () => fetchJobs();
 
-  // ✅ Pagination renderer
+  // ✅ Pagination buttons
   const renderPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
@@ -99,6 +87,7 @@ function FilterSortJob({ onEdit }) {
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
     setFiltersChanged(true);
+    setPage(1);
   };
 
   const resetFilters = () => {
@@ -107,10 +96,10 @@ function FilterSortJob({ onEdit }) {
     setLocation("All");
     setSortOrder("newest");
     setFiltersChanged(false);
+    setPage(1);
     fetchJobs();
   };
 
-  // ✅ Simplified dropdown (no yellow)
   const dropdownClass = () =>
     `appearance-none relative rounded-full px-4 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-[#ffcc00] transition-all duration-200 pr-8 bg-gray-50 border border-gray-200 text-gray-600 hover:border-gray-300`;
 
@@ -133,6 +122,7 @@ function FilterSortJob({ onEdit }) {
           onChange={(e) => {
             setLocation(e.target.value.trim() === "" ? "All" : e.target.value);
             setFiltersChanged(true);
+            setPage(1);
           }}
           className="rounded-full px-4 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-[#ffcc00] transition-all duration-200 bg-gray-50 border border-gray-200 text-gray-600 hover:border-gray-300"
         />
@@ -172,7 +162,6 @@ function FilterSortJob({ onEdit }) {
           />
         </div>
 
-        {/* Search / Reset Button */}
         {filtersChanged ? (
           <button
             onClick={resetFilters}

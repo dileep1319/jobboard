@@ -28,7 +28,8 @@ function AddJob({ onClose, onSuccess }) {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
-      setMessage("→ Job added successfully!");
+
+      setMessage("Job added successfully!");
       setFormData({
         title: "",
         company: "",
@@ -36,9 +37,14 @@ function AddJob({ onClose, onSuccess }) {
         job_type: "",
         tags: "",
       });
-      if (onSuccess) onSuccess();
+
+      // 👇 Delay refreshing + closing to show success message
+      setTimeout(() => {
+        if (onSuccess) onSuccess(); // refresh job list
+        onClose(); // close popup
+      }, 1000); // 1 second delay so user can see success
     } catch (err) {
-      setMessage(`→ ${err.message}`);
+      setMessage(`❌ ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -52,7 +58,7 @@ function AddJob({ onClose, onSuccess }) {
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition text-lg"
         >
-         ×
+          ×
         </button>
 
         <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
@@ -123,7 +129,7 @@ function AddJob({ onClose, onSuccess }) {
           {/* Message */}
           {message && (
             <p
-              className={`text-sm text-center mt-2 ${
+              className={`text-sm text-center mt-2 transition-opacity duration-300 ${
                 message.includes("successfully")
                   ? "text-green-600"
                   : "text-red-600"
